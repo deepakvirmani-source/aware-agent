@@ -42,7 +42,7 @@ IST = pytz.timezone("Asia/Kolkata")
 app = FastAPI(
     title="Aware News API",
     description="Stateless news proxy — weather, AQI, RSS. No user data.",
-    version="3.0.0",
+    version="3.1.0",
 )
 
 app.add_middleware(
@@ -135,9 +135,14 @@ async def get_weather():
     weather = data.get("weather")
 
     if not weather:
+        # Try fetching directly as fallback
+        import news_fetcher as nf
+        weather = nf._fetch_weather_open_meteo()
+
+    if not weather:
         return JSONResponse({
             "available": False,
-            "message":   "Weather data unavailable. Add OPENWEATHER_API_KEY to environment.",
+            "message": "Weather data temporarily unavailable. Retrying on next refresh.",
         })
 
     return JSONResponse(_serialize({"available": True, **weather}))
