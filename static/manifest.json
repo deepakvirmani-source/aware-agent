@@ -1,0 +1,38 @@
+{
+  "name": "Aware - Your Daily Intelligence",
+  "short_name": "Aware",
+  "description": "Personal awareness agent for daily life in Faridabad/Delhi NCR",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#006ADC",
+  "theme_color": "#006ADC",
+  "categories": ["news", "productivity", "lifestyle"],
+  "icons": [
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Traffic Update",
+      "url": "/?tab=traffic",
+      "description": "Check commute traffic"
+    },
+    {
+      "name": "Today's Briefing",
+      "url": "/?tab=briefing",
+      "description": "View daily briefing"
+    }
+  ]
+}

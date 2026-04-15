@@ -1,0 +1,124 @@
+name: Deepak Virmani
+age: 28
+
+location:
+  city: Faridabad
+  state: Haryana
+  country: India
+  pin_code: "121001"
+  neighborhood: "Sector 16"
+  landmarks_nearby:
+    - "Faridabad Railway Station"
+    - "NHPC Chowk"
+    - "Sector 16A Market"
+
+work:
+  company: "GobbleCube"
+  role: "Data/Analytics"
+  works_in: "Gurugram"
+  office_area: "Cyber City / Golf Course Road"  # update this
+  work_hours: "10:00 AM - 7:00 PM"
+  work_days: "Mon-Fri"
+  flexible_hours: true  # can adjust start time if warned early
+
+commute:
+  mode: "car"
+  route_primary: "Faridabad → Badarpur Border → Faridabad-Gurugram Expressway → Gurugram"
+  route_alt_1: "Faridabad → Mathura Road → South Delhi → MG Road → Gurugram"
+  route_alt_2: "Faridabad → Surajkund → Gurugram via Pali Road"
+  key_junctions:
+    - "NHPC Chowk"
+    - "Badarpur Border"
+    - "Sarai Khale Khan"
+    - "Ashram Chowk"
+    - "Sohna Road"
+    - "IFFCO Chowk"
+    - "Golf Course Road"
+  typical_time: "50 mins"
+  worst_case_time: "2 hours"
+  leave_home_by: "9:00 AM"
+  return_home_by: "7:30 PM"
+  fuel_type: "petrol"
+  toll_route: true  # uses expressway with toll
+
+nearby_areas:
+  - Faridabad
+  - Delhi NCR
+  - Gurugram
+  - Noida
+  - Greater Noida
+  - Palwal
+  - South Delhi
+  - Badarpur
+  - Surajkund
+
+family:
+  has_school_children: true
+  school_board: "CBSE"
+  school_area: "Faridabad"  # kids go to school near home
+  school_timing: "7:30 AM - 2:00 PM"
+  spouse_works: false  # update if needed
+  elderly_at_home: false  # update if needed
+  pets: false
+
+health:
+  sensitive_to_aqi: true  # gets affected by bad air
+  aqi_threshold: 200  # alert when AQI crosses this
+  allergies: []  # add if any
+
+vehicle:
+  type: "car"
+  fuel: "petrol"
+  fastag: true
+  insurance_renewal: ""  # add date like "2026-08-15"
+  puc_expiry: ""  # add date
+
+home:
+  power_company: "DHBVN"  # Dakshin Haryana Bijli Vitran Nigam
+  water_source: "municipal"  # Faridabad MCF
+  gas_connection: "piped"  # or "cylinder"
+  housing_type: "apartment"  # apartment / independent house
+
+daily_routine:
+  wake_up: "7:00 AM"
+  leave_home: "9:00 AM"
+  reach_office: "10:00 AM"
+  lunch: "1:00 PM"
+  leave_office: "7:00 PM"
+  reach_home: "8:00 PM"
+  sleep: "11:30 PM"
+  exercise: "morning"  # morning / evening / none
+  exercise_type: "outdoor"  # outdoor / gym / none
+
+interests:
+  - traffic & commute disruptions
+  - weather (rain, fog, heatwave)
+  - air quality (AQI)
+  - CBSE exam schedules & school closures
+  - strikes, protests, bandhs
+  - government policy (tax, fuel, tolls)
+  - road construction & closures
+  - Delhi-NCR metro disruptions
+  - power cuts (DHBVN schedule)
+  - water supply disruptions
+  - fuel prices (petrol/diesel)
+  - festivals & public holidays
+  - local crime & safety alerts
+  - expressway toll changes
+  - Haryana state announcements
+
+# Things the agent should proactively tell me:
+proactive_rules:
+  - "If rain expected during commute hours, tell me to leave early or carry umbrella"
+  - "If AQI > 200, warn me to keep windows up in car and avoid outdoor exercise"
+  - "If any exam at schools near my route, warn about traffic near schools"
+  - "If protest/strike on my commute route, suggest alternate route"
+  - "If fuel prices change, tell me whether to fill up today or wait"
+  - "If long weekend coming, remind me about travel plans and traffic"
+  - "If road construction on my route, suggest alt route with time estimate"
+  - "If power cut scheduled in my sector, remind me to charge devices"
+  - "If heavy fog expected, tell me to leave extra early and drive slow"
+  - "If Friday or day before holiday, warn about heavier evening traffic"
+  - "If any toll price change on Faridabad-Gurugram expressway, flag it"
+  - "If school results day, expect heavy traffic near schools"
+  - "If summer and heatwave, remind me to keep water in car"
