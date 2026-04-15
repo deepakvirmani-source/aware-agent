@@ -171,44 +171,47 @@ def fetch_rss_feeds() -> list[dict]:
 # ── Weather (OpenWeatherMap) ──────────────────────────────────────────────────
 
 def fetch_weather() -> dict | None:
-    """Fetch current weather and forecast for Faridabad. Returns None if no API key."""
-    if not config.OPENWEATHER_API_KEY:
-        return None
-
+    """Fetch weather. Tries OpenWeatherMap first, falls back to Open-Meteo (no key needed)."""
     cache_key = "weather:faridabad"
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached
 
+    result = None
+
+    # Try OpenWeatherMap first (if key available)
+    if config.OPENWEATHER_API_KEY:
+        result = _fetch_weather_openweathermap()
+
+    # Fallback to Open-Meteo (always free, no key)
+    if result is None:
+        result = _fetch_weather_open_meteo()
+
+    if result:
+        _cache_set(cache_key, result)
+    return result
+
+
+def _fetch_weather_openweathermap() -> dict | None:
+    """Fetch from OpenWeatherMap (needs API key)."""
     try:
-        # Current weather
         resp = requests.get(
             f"{config.WEATHER_BASE_URL}/weather",
-            params={
-                "q": config.WEATHER_CITY,
-                "appid": config.OPENWEATHER_API_KEY,
-                "units": "metric",
-            },
+            params={"q": config.WEATHER_CITY, "appid": config.OPENWEATHER_API_KEY, "units": "metric"},
             timeout=10,
         )
         resp.raise_for_status()
         current = resp.json()
 
-        # 5-day forecast (3-hour intervals)
         forecast_resp = requests.get(
             f"{config.WEATHER_BASE_URL}/forecast",
-            params={
-                "q": config.WEATHER_CITY,
-                "appid": config.OPENWEATHER_API_KEY,
-                "units": "metric",
-                "cnt": 8,  # next 24 hours
-            },
+            params={"q": config.WEATHER_CITY, "appid": config.OPENWEATHER_API_KEY, "units": "metric", "cnt": 8},
             timeout=10,
         )
         forecast_resp.raise_for_status()
         forecast = forecast_resp.json()
 
-        result = {
+        return {
             "city": current.get("name", "Faridabad"),
             "temp_c": round(current["main"]["temp"], 1),
             "feels_like_c": round(current["main"]["feels_like"], 1),
@@ -221,9 +224,7 @@ def fetch_weather() -> dict | None:
             "visibility_km": round(current.get("visibility", 10000) / 1000, 1),
             "forecast": [
                 {
-                    "time": _to_ist(
-                        datetime.fromtimestamp(item["dt"], tz=timezone.utc)
-                    ).strftime("%I:%M %p"),
+                    "time": _to_ist(datetime.fromtimestamp(item["dt"], tz=timezone.utc)).strftime("%I:%M %p"),
                     "temp_c": round(item["main"]["temp"], 1),
                     "description": item["weather"][0]["description"].title(),
                     "rain_mm": item.get("rain", {}).get("3h", 0),
@@ -231,11 +232,134 @@ def fetch_weather() -> dict | None:
                 for item in forecast.get("list", [])[:4]
             ],
             "alerts": _extract_weather_alerts(current),
+            "source": "OpenWeatherMap",
             "fetched_at": datetime.now(IST),
         }
-        _cache_set(cache_key, result)
-        return result
-    except Exception as e:
+    except Exception:
+        return None
+
+
+# Faridabad coordinates
+_FARIDABAD_LAT = 28.4089
+_FARIDABAD_LNG = 77.3178
+
+# WMO weather code descriptions
+_WMO_CODES = {
+    0: "Clear Sky", 1: "Mainly Clear", 2: "Partly Cloudy", 3: "Overcast",
+    45: "Fog", 48: "Depositing Rime Fog",
+    51: "Light Drizzle", 53: "Moderate Drizzle", 55: "Dense Drizzle",
+    61: "Slight Rain", 63: "Moderate Rain", 65: "Heavy Rain",
+    71: "Slight Snow", 73: "Moderate Snow", 75: "Heavy Snow",
+    80: "Slight Showers", 81: "Moderate Showers", 82: "Violent Showers",
+    95: "Thunderstorm", 96: "Thunderstorm With Hail", 99: "Thunderstorm With Heavy Hail",
+}
+
+
+def _fetch_weather_open_meteo() -> dict | None:
+    """Fetch from Open-Meteo — completely free, no API key needed."""
+    try:
+        # Current weather + hourly forecast
+        resp = requests.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params={
+                "latitude": _FARIDABAD_LAT,
+                "longitude": _FARIDABAD_LNG,
+                "current": "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,visibility",
+                "hourly": "temperature_2m,weather_code,precipitation_probability,precipitation",
+                "daily": "temperature_2m_max,temperature_2m_min,weather_code,precipitation_sum",
+                "timezone": "Asia/Kolkata",
+                "forecast_days": 2,
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+        current = data.get("current", {})
+        hourly = data.get("hourly", {})
+        daily = data.get("daily", {})
+
+        weather_code = current.get("weather_code", 0)
+        description = _WMO_CODES.get(weather_code, "Unknown")
+        temp = current.get("temperature_2m", 0)
+        humidity = current.get("relative_humidity_2m", 0)
+        wind = current.get("wind_speed_10m", 0)
+        visibility = current.get("visibility", 10000)
+
+        # Build forecast from hourly (next 4 x 3-hour slots)
+        forecast = []
+        hourly_times = hourly.get("time", [])
+        hourly_temps = hourly.get("temperature_2m", [])
+        hourly_codes = hourly.get("weather_code", [])
+        hourly_rain = hourly.get("precipitation", [])
+        hourly_rain_prob = hourly.get("precipitation_probability", [])
+
+        # Find current hour index
+        now_hour = datetime.now(IST).strftime("%Y-%m-%dT%H:00")
+        start_idx = 0
+        for i, t in enumerate(hourly_times):
+            if t >= now_hour:
+                start_idx = i
+                break
+
+        for offset in [1, 3, 6, 9]:
+            idx = start_idx + offset
+            if idx < len(hourly_times):
+                t = hourly_times[idx]
+                forecast.append({
+                    "time": datetime.fromisoformat(t).strftime("%I:%M %p"),
+                    "temp_c": round(hourly_temps[idx], 1) if idx < len(hourly_temps) else None,
+                    "description": _WMO_CODES.get(hourly_codes[idx], "") if idx < len(hourly_codes) else "",
+                    "rain_mm": round(hourly_rain[idx], 1) if idx < len(hourly_rain) else 0,
+                    "rain_prob_pct": hourly_rain_prob[idx] if idx < len(hourly_rain_prob) else 0,
+                })
+
+        # Build alerts
+        alerts = []
+        if weather_code >= 95:
+            alerts.append("Thunderstorm — drive carefully, avoid flooded underpasses.")
+        elif weather_code in (63, 65, 81, 82):
+            alerts.append("Heavy rain — expect waterlogging, add 20+ mins to commute.")
+        elif weather_code in (61, 80):
+            alerts.append("Rain — wet roads, reduced visibility. Drive carefully.")
+        elif weather_code in (45, 48):
+            if visibility < 1000:
+                alerts.append(f"Dense fog (visibility {int(visibility)}m) — drive with fog lights, leave early.")
+            else:
+                alerts.append("Foggy conditions — reduced visibility, drive carefully.")
+        if temp > 42:
+            alerts.append(f"Heat wave ({temp}°C) — stay hydrated, avoid outdoor exertion 12-4 PM.")
+        if temp < 5:
+            alerts.append(f"Cold wave ({temp}°C) — wrap up, check for fog on expressway.")
+
+        # Check if rain coming in next 6 hours
+        upcoming_rain = []
+        for offset in range(1, 7):
+            idx = start_idx + offset
+            if idx < len(hourly_rain) and hourly_rain[idx] > 0.5:
+                rain_time = datetime.fromisoformat(hourly_times[idx]).strftime("%I:%M %p")
+                upcoming_rain.append((rain_time, round(hourly_rain[idx], 1)))
+        if upcoming_rain and not any("rain" in a.lower() for a in alerts):
+            first = upcoming_rain[0]
+            alerts.append(f"Rain expected at {first[0]} ({first[1]}mm) — carry umbrella, plan commute accordingly.")
+
+        return {
+            "city": "Faridabad",
+            "temp_c": round(temp, 1),
+            "feels_like_c": round(current.get("apparent_temperature", temp), 1),
+            "temp_min_c": round(daily.get("temperature_2m_min", [temp])[0], 1),
+            "temp_max_c": round(daily.get("temperature_2m_max", [temp])[0], 1),
+            "humidity_pct": humidity,
+            "description": description,
+            "icon": None,
+            "wind_speed_kmh": round(wind, 1),
+            "visibility_km": round(visibility / 1000, 1),
+            "forecast": forecast,
+            "alerts": alerts,
+            "source": "Open-Meteo",
+            "fetched_at": datetime.now(IST),
+        }
+    except Exception:
         return None
 
 
