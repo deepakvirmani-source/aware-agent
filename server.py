@@ -174,24 +174,30 @@ async def get_status():
 
 # ── Static files (PWA) ────────────────────────────────────────────────────────
 
-static_dir = Path(__file__).parent / "static"
-if static_dir.exists():
-    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+static_dir = Path(__file__).resolve().parent / "static"
 
-    @app.get("/")
-    async def serve_index():
-        from fastapi.responses import FileResponse
-        return FileResponse(str(static_dir / "index.html"))
 
-    @app.get("/manifest.json")
-    async def serve_manifest():
-        from fastapi.responses import FileResponse
-        return FileResponse(str(static_dir / "manifest.json"))
+@app.get("/")
+async def serve_index():
+    from fastapi.responses import FileResponse
+    index = static_dir / "index.html"
+    return FileResponse(str(index))
 
-    @app.get("/sw.js")
-    async def serve_sw():
-        from fastapi.responses import FileResponse
-        return FileResponse(str(static_dir / "sw.js"), media_type="application/javascript")
+
+@app.get("/manifest.json")
+async def serve_manifest():
+    from fastapi.responses import FileResponse
+    return FileResponse(str(static_dir / "manifest.json"))
+
+
+@app.get("/sw.js")
+async def serve_sw():
+    from fastapi.responses import FileResponse
+    return FileResponse(str(static_dir / "sw.js"), media_type="application/javascript")
+
+
+# Mount static AFTER explicit routes so / doesn't get swallowed
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 
 # ── Icon generation on startup ────────────────────────────────────────────────
